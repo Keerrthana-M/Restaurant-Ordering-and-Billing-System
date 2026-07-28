@@ -106,8 +106,8 @@ FoodieXpress
 
 # 🏗️ System Architecture
 
-                     🍽️ FOODIEXPRESS
-            QR-Based Restaurant Ordering System
+	              🍽️ FOODIEXPRESS
+         QR-Based Restaurant Ordering System
 
  ┌────────────┐   ┌────────────┐   ┌────────────┐
  │ Customer   │   │  Waiter    │   │   Admin    │
@@ -154,7 +154,10 @@ FoodieXpress
           │ • Orders                    │
           │ • Order Items               │
           └─────────────────────────────┘
----
+
+ 
+
+                   
 
 # 🔄 Application Workflow
 

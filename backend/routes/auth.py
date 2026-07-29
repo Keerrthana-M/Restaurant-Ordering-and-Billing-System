@@ -38,15 +38,15 @@ def send_otp():
                 from_=twilio_number,
                 to=f"+91{mobile_number}"  # India country code added automatically
             )
-            print(f"✅ Twilio SMS sent! SID: {message.sid}", flush=True)
+            print(f"Twilio SMS sent! SID: {message.sid}", flush=True)
         except Exception as e:
             # HACKATHON SAFETY NET: If Twilio fails, don't break the app! 
             # Print the error, then fallback to terminal mock.
-            print(f"❌ Twilio SMS sending error: {e}", flush=True)
+            print(f"Twilio SMS sending error: {e}", flush=True)
             print("\n" + "="*50, flush=True)
-            print("⚠️ TWILIO FAILED - FALLING BACK TO MOCK SMS ⚠️", flush=True)
-            print(f"📱 To Mobile: {mobile_number}", flush=True)
-            print(f"🔑 Your OTP : {otp}", flush=True)
+            print("TWILIO FAILED - FALLING BACK TO MOCK SMS", flush=True)
+            print(f"To Mobile: {mobile_number}", flush=True)
+            print(f"Your OTP : {otp}", flush=True)
             print("="*50 + "\n", flush=True)
             
             # Return 200 OK so the frontend keeps working smoothly
@@ -54,9 +54,9 @@ def send_otp():
     else:
         # Fallback to Terminal Mock if Twilio keys aren't fully set up yet
         print("\n" + "="*50, flush=True)
-        print("🚀 MOCK SMS DELIVERED (Twilio Keys Missing)!", flush=True)
-        print(f"📱 To Mobile: {mobile_number}", flush=True)
-        print(f"🔑 Your OTP : {otp}", flush=True)
+        print("MOCK SMS DELIVERED (Twilio Keys Missing)!", flush=True)
+        print(f"To Mobile: {mobile_number}", flush=True)
+        print(f"Your OTP : {otp}", flush=True)
         print("="*50 + "\n", flush=True)
 
     # Return 200 OK to the frontend so it moves to the "Enter OTP" screen
@@ -219,6 +219,7 @@ def admin_login():
             "id": user.id,
             "name": user.name,
             "email": user.email,
-            "role": user.role
+            "role": user.role,
+            "restaurant_id": user.restaurant_id
         }
     }), 200

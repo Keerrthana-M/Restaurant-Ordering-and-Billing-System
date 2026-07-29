@@ -32,6 +32,12 @@ class Restaurant(db.Model):
     qr_code_token = db.Column(db.String(64), unique=True, nullable=False)
     is_active = db.Column(db.Boolean, default=True)
 
+    # Added Profile Fields
+    contact_number = db.Column(db.String(20), nullable=True)
+    description = db.Column(db.String(500), nullable=True)
+    opening_hours = db.Column(db.String(100), nullable=True)
+    logo = db.Column(db.String(500), nullable=True)
+
     menu_items = db.relationship('MenuItem', backref='restaurant', lazy=True)
 
 class RestaurantTable(db.Model):

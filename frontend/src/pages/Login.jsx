@@ -1,8 +1,21 @@
-import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import React, { useState, useEffect } from 'react';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-  const Login = () => {
-  const [role, setRole] = useState('customer');
+
+const Login = () => {
+  const [searchParams] = useSearchParams();
+  const initialRole = searchParams.get('role');
+  const [role, setRole] = useState(
+    ['customer', 'waiter', 'admin'].includes(initialRole) ? initialRole : 'customer'
+  );
+
+  useEffect(() => {
+    const roleParam = searchParams.get('role');
+    if (['customer', 'waiter', 'admin'].includes(roleParam)) {
+      setRole(roleParam);
+    }
+  }, [searchParams]);
+
   const [mobile, setMobile] = useState('');
   const [otp, setOtp] = useState('');
   const [name, setName] = useState('');

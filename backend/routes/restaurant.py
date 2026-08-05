@@ -19,6 +19,7 @@ def get_restaurants():
             'address': r.address,
             'area': r.area,
             'cuisine_type': r.cuisine_type,
+            'opening_hours': r.opening_hours,
             'qr_code_token': r.qr_code_token
         })
 
@@ -117,9 +118,15 @@ def place_order():
     customer_id = data.get('customer_id')
     
     print("Customer ID received:", customer_id)
-    print("Full Request Data:", data)
-    table_number = data.get('table_number')
     order_type = data.get('order_type', 'dine_in')
+    raw_table_number = data.get('table_number')
+    if order_type == 'dine_in' and raw_table_number is not None and str(raw_table_number).strip() != '':
+        try:
+            table_number = int(raw_table_number)
+        except (ValueError, TypeError):
+            table_number = None
+    else:
+        table_number = None
     items = data.get('items', [])
 
     # Validation
@@ -228,6 +235,7 @@ def get_orders(restaurant_id):
         result.append({
             "order_id": order.id,
             "table_number": order.table_number,
+            "order_type": order.order_type,
             "status": order.status,
             "total_amount": order.total_amount,
             "created_at": order.created_at.strftime("%d-%m-%Y %H:%M"),
@@ -295,11 +303,12 @@ def customer_orders(customer_id):
               "restaurant_id": order.restaurant_id,
               "restaurant_name": restaurant.name if restaurant else "Unknown Restaurant",
               "table_number": order.table_number,
+              "order_type": order.order_type,
               "status": order.status,
               "total_amount": order.total_amount,
               "created_at": order.created_at.strftime("%d-%m-%Y %H:%M"),
               "items": order_items
-})
+        })
     return jsonify(result), 200
 
 # -----------------------------

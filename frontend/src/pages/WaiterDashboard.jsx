@@ -139,9 +139,37 @@ const WaiterDashboard = () => {
                 {/* Order Header */}
                 <div className="d-flex justify-content-between align-items-start mb-3">
                   <div>
-                    <h6 className="menu-card-name mb-0">Order #{order.order_id}</h6>
+                    <div className="d-flex align-items-center gap-2 mb-1 flex-wrap">
+                      <h6 className="menu-card-name mb-0">Order #{order.order_id}</h6>
+                      {order.order_type === 'takeaway' ? (
+                        <span
+                          className="badge-pill"
+                          style={{
+                            background: '#0dcaf022',
+                            color: '#0dcaf0',
+                            border: '1px solid #0dcaf055',
+                            fontSize: '0.75rem',
+                            fontWeight: '600'
+                          }}
+                        >
+                          🥡 Takeaway
+                        </span>
+                      ) : (
+                        <span
+                          className="badge-pill gold"
+                          style={{
+                            fontSize: '0.75rem',
+                            fontWeight: '600'
+                          }}
+                        >
+                          🪑 Dine In
+                        </span>
+                      )}
+                    </div>
                     <small className="text-secondary">
-                      Table {order.table_number} · {order.created_at} · {order.order_type || "Dine In"}
+                      {order.order_type === 'takeaway'
+                        ? `${order.created_at}`
+                        : `Table ${order.table_number || 'N/A'} · ${order.created_at}`}
                     </small>
                   </div>
                   <span

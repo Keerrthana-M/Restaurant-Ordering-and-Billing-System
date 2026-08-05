@@ -37,6 +37,7 @@ class Restaurant(db.Model):
     description = db.Column(db.String(500), nullable=True)
     opening_hours = db.Column(db.String(100), nullable=True)
     logo = db.Column(db.String(500), nullable=True)
+    gst_number = db.Column(db.String(20), nullable=True)  # Optional GST number for registered owners
 
     menu_items = db.relationship('MenuItem', backref='restaurant', lazy=True)
 

@@ -1069,9 +1069,21 @@ def seed_data():
     db.session.add_all(menu_items)
     db.session.commit()
 
-    print('✅ Seed data added: 10 restaurants, 10 menu items')
+    print('✅ Seed data added: 10 restaurants, 100 menu items')
 
-    admin = User(email='admin@foodiexpress.com', role='admin')
+    # -----------------------------------------------------------------------
+    # FALLBACK SUPERUSER ADMIN — FOR DEVELOPMENT AND TESTING ONLY
+    # This account is NOT exposed in the UI for production use.
+    # Real restaurant owners register via /register-restaurant.
+    # This seeded admin has no linked restaurant_id (can see all in future).
+    # -----------------------------------------------------------------------
+    from werkzeug.security import generate_password_hash
+    admin = User(
+        email='admin@foodiexpress.com',
+        name='Platform Admin',
+        role='admin',
+        password_hash=generate_password_hash('admin123')
+    )
 
     waiter1 = User(
     waiter_code='WAITER-001',
@@ -1081,7 +1093,7 @@ def seed_data():
     db.session.add_all([admin, waiter1])
     db.session.commit()
 
-    print('✅ Seed accounts added: admin, waiter')
+    print('✅ Seed accounts added: admin (hashed password), waiter')
 
 
 if __name__ == '__main__':

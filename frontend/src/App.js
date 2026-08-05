@@ -13,6 +13,7 @@ import WaiterDashboard from './pages/WaiterDashboard';
 import AdminDashboard from './pages/AdminDashboard';
 import QRScanner from './pages/QRScanner';
 import LandingPage from './pages/LandingPage';
+import RegisterRestaurant from './pages/RegisterRestaurant';
 import { ThemeProvider } from './context/ThemeContext';
 import MyOrders from "./pages/MyOrders";
 
@@ -25,6 +26,7 @@ function App() {
           <Routes>
             <Route path="/" element={<LandingPage  />} />
             <Route path="/login" element={<Login />} />
+            <Route path="/register-restaurant" element={<RegisterRestaurant />} />
             <Route path="/restaurants" element={
               <ProtectedRoute><RestaurantList /></ProtectedRoute>
             } />

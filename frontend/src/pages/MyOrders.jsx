@@ -95,16 +95,15 @@ const getStepStatus = (currentStatus, step) => {
 </div>
 
                <div className="text-secondary small">
-
-  <div>
-    🪑 Table {order.table_number}
-  </div>
-
-  <div>
-    📅 {order.created_at}
-  </div>
-
-</div> 
+                  {order.order_type === 'takeaway' ? (
+                    <div>🥡 Takeaway (Counter Pickup)</div>
+                  ) : (
+                    <div>🪑 Table {order.table_number || 'N/A'}</div>
+                  )}
+                  <div>
+                    📅 {order.created_at}
+                  </div>
+                </div> 
 
               </div>
 

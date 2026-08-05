@@ -1,10 +1,12 @@
 import os
 import random
+import uuid
 import requests
 from flask import Blueprint, request, jsonify
 from flask_jwt_extended import create_access_token
+from werkzeug.security import generate_password_hash, check_password_hash
 from twilio.rest import Client
-from models import db, User
+from models import db, User, Restaurant
 
 auth_bp = Blueprint('auth', __name__)
 
@@ -188,6 +190,8 @@ def waiter_login():
 
 # -------------------------
 # ADMIN LOGIN
+# Fixed: now uses werkzeug check_password_hash instead of literal string comparison.
+# Works for the seeded fallback admin AND any self-registered restaurant owner.
 # -------------------------
 @auth_bp.route('/admin-login', methods=['POST'])
 def admin_login():
@@ -195,21 +199,31 @@ def admin_login():
     
     email = data.get("email")
     password = data.get("password")
-    
+
+    if not email or not password:
+        return jsonify({"error": "Email and password are required"}), 400
+
     user = User.query.filter_by(
         email=email,
         role="admin"
     ).first()
     
-    if not user or password != "admin123":
+    if not user or not user.password_hash:
         return jsonify({
             "error": "Invalid email or password"
         }), 401
-        
+
+    if not check_password_hash(user.password_hash, password):
+        return jsonify({
+            "error": "Invalid email or password"
+        }), 401
+
+    # Embed restaurant_id in the JWT so the admin dashboard can use it directly
     token = create_access_token(
         identity=str(user.id),
         additional_claims={
-            "role": "admin"
+            "role": "admin",
+            "restaurant_id": user.restaurant_id
         }
     )
     
@@ -223,3 +237,86 @@ def admin_login():
             "restaurant_id": user.restaurant_id
         }
     }), 200
+
+
+# -------------------------
+# REGISTER RESTAURANT (New endpoint)
+# Allows any restaurant owner to self-register and get their own admin account.
+# Does NOT auto-login — returns a success message and lets them login manually.
+# -------------------------
+@auth_bp.route('/register-restaurant', methods=['POST'])
+def register_restaurant():
+    data = request.get_json()
+
+    # --- Required field extraction ---
+    restaurant_name = data.get("restaurant_name", "").strip()
+    owner_name      = data.get("owner_name", "").strip()
+    email           = data.get("email", "").strip().lower()
+    password        = data.get("password", "")
+    phone           = data.get("phone", "").strip()
+    address         = data.get("address", "").strip()
+    cuisine_type    = data.get("cuisine_type", "").strip()
+    opening_hours   = data.get("opening_hours", "").strip()
+    gst_number      = data.get("gst_number", "").strip()  # optional
+
+    # --- Server-side validation ---
+    errors = {}
+    if not restaurant_name:
+        errors["restaurant_name"] = "Restaurant name is required"
+    if not owner_name:
+        errors["owner_name"] = "Owner name is required"
+    if not email or "@" not in email:
+        errors["email"] = "Valid email address is required"
+    if not password or len(password) < 8:
+        errors["password"] = "Password must be at least 8 characters"
+    if not phone or not phone.isdigit() or len(phone) != 10:
+        errors["phone"] = "Valid 10-digit phone number is required"
+    if not address:
+        errors["address"] = "Address is required"
+    if not cuisine_type:
+        errors["cuisine_type"] = "Cuisine type is required"
+    if not opening_hours:
+        errors["opening_hours"] = "Opening hours are required"
+
+    if errors:
+        return jsonify({"error": "Validation failed", "fields": errors}), 400
+
+    # --- Check for duplicate email ---
+    if User.query.filter_by(email=email).first():
+        return jsonify({"error": "An account with this email already exists"}), 400
+
+    # --- Create the Restaurant record first ---
+    qr_token = "qr-" + str(uuid.uuid4())[:12]  # Unique QR token for the new restaurant
+
+    new_restaurant = Restaurant(
+        name=restaurant_name,
+        address=address,
+        cuisine_type=cuisine_type,
+        opening_hours=opening_hours,
+        contact_number=phone,
+        gst_number=gst_number or None,
+        qr_code_token=qr_token,
+        is_active=True
+    )
+    db.session.add(new_restaurant)
+    db.session.flush()  # Flush so new_restaurant.id is available before commit
+
+    # --- Create the admin User linked to this restaurant ---
+    hashed_pw = generate_password_hash(password)
+    new_user = User(
+        name=owner_name,
+        email=email,
+        password_hash=hashed_pw,
+        role="admin",
+        restaurant_id=new_restaurant.id
+    )
+    db.session.add(new_user)
+    db.session.commit()
+
+    print(f"✅ New restaurant registered: {restaurant_name} (owner: {owner_name}, email: {email})", flush=True)
+
+    return jsonify({
+        "message": "Restaurant registered successfully! You can now login with your email and password.",
+        "restaurant_name": restaurant_name,
+        "owner_name": owner_name
+    }), 201

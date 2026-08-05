@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useAuth } from '../context/AuthContext';
 
 const fallbackImages = {
   'South Indian': 'https://images.unsplash.com/photo-1589301760014-d929f3979dbc?w=600&h=300&fit=crop',
@@ -14,12 +15,35 @@ const fallbackImages = {
 
 const RestaurantList = () => {
   const navigate = useNavigate();
+  const { user, logout } = useAuth();
+  const customerName = user?.name || user?.username || 'Customer';
+
   const [restaurants, setRestaurants] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   
   // New state to track what the user is typing in the search bar
   const [searchQuery, setSearchQuery] = useState('');
+
+  // Active Order state for banner
+  const [activeOrder, setActiveOrder] = useState(null);
+  const [showActiveBanner, setShowActiveBanner] = useState(true);
+
+  useEffect(() => {
+    if (user?.id) {
+      fetch(`http://127.0.0.1:5000/api/restaurants/customer-orders/${user.id}`)
+        .then(res => res.ok ? res.json() : [])
+        .then(orders => {
+          if (Array.isArray(orders)) {
+            const active = orders.find(o => 
+              ['pending', 'preparing', 'ready'].includes((o.status || '').toLowerCase())
+            );
+            if (active) setActiveOrder(active);
+          }
+        })
+        .catch(err => console.log(err));
+    }
+  }, [user]);
 
   useEffect(() => {
     // Removed the trailing slash here to fix the 404 error
@@ -54,15 +78,51 @@ const RestaurantList = () => {
   return (
     <div className="page-body fade-up pb-5 mb-5">
       {/* Top Bar */}
-      <div className="d-flex justify-content-between align-items-center mb-5">
+      <div className="d-flex justify-content-between align-items-center mb-4">
         <div>
-          <h2 className="top-bar-title mb-1">Select a Restaurant</h2>
+          <h2 className="top-bar-title mb-1">Welcome back, {customerName}!</h2>
           <p className="top-bar-sub">Choose a restaurant or scan the QR code at your table</p>
         </div>
-        <button className="btn-outline-custom ms-3 py-1 px-2" onClick={() => navigate('/login')}>
+        <button className="btn-outline-custom ms-3 py-1 px-2" onClick={() => { logout(); navigate('/login'); }}>
           Logout
         </button>
       </div>
+
+      {/* Sticky Active Order Banner */}
+      {showActiveBanner && activeOrder && (
+        <div 
+          className="glass-card mb-4 p-3 d-flex align-items-center justify-content-between border-warning flex-wrap gap-2"
+          style={{ background: 'rgba(255, 193, 7, 0.12)', border: '1px solid #ffc107', borderRadius: '12px' }}
+        >
+          <div className="d-flex align-items-center gap-3">
+            <span style={{ fontSize: '1.4rem' }}>🔔</span>
+            <div>
+              <span className="text-light fw-semibold" style={{ fontSize: '0.95rem' }}>
+                You have an active order at <strong className="text-warning">{activeOrder.restaurant_name}</strong>
+              </span>
+              <span className="badge ms-2 bg-warning text-dark text-capitalize" style={{ fontSize: '0.75rem' }}>
+                {activeOrder.status}
+              </span>
+            </div>
+          </div>
+          <div className="d-flex align-items-center gap-3 ms-auto">
+            <button 
+              className="btn btn-warning btn-sm fw-bold px-3"
+              onClick={() => navigate('/my-orders')}
+              style={{ borderRadius: '8px', fontSize: '0.85rem' }}
+            >
+              Track Order →
+            </button>
+            <button 
+              type="button"
+              className="btn-close btn-close-white" 
+              style={{ fontSize: '0.75rem', opacity: 0.8 }}
+              onClick={() => setShowActiveBanner(false)}
+              title="Dismiss banner"
+            ></button>
+          </div>
+        </div>
+      )}
 
       {/* QR Banner */}
       <div className="qr-banner glass-card mb-5 d-flex align-items-center justify-content-between p-4">
@@ -144,10 +204,15 @@ const RestaurantList = () => {
                 />
                 <div className="restaurant-card-body">
                   <h4 className="restaurant-card-title">{r.name}</h4>
-                  <div className="d-flex gap-2 mb-3 flex-wrap">
+                  <div className="d-flex gap-2 mb-2 flex-wrap">
                     <span className="badge-pill gold"><i className="bi bi-geo-alt me-1"></i>{r.area || 'Unknown Location'}</span>
                     <span className="badge-pill blue"><i className="bi bi-cup-hot me-1"></i>{r.cuisine_type || 'General'}</span>
                   </div>
+                  {r.opening_hours && (
+                    <p style={{ fontSize: '0.78rem', color: '#4caf50', marginBottom: '6px', display: 'flex', alignItems: 'center', gap: 4 }}>
+                      <i className="bi bi-clock"></i> {r.opening_hours}
+                    </p>
+                  )}
                   <p className="restaurant-card-info mb-4" style={{ fontSize: '0.85rem' }}>{r.address || 'Address not available'}</p>
                   <button className="btn-primary-custom w-100 justify-content-center" onClick={() => handleViewMenu(r.id)}>
                     View Menu <i className="bi bi-arrow-right ms-1"></i>

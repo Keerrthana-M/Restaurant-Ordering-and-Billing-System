@@ -57,7 +57,7 @@ const LandingPage = () => {
   return (
     <div className="bg-dark text-light min-vh-100" style={{ backgroundColor: '#0a0a0f' }}>
 
-      <Navbar hideToggle forceDark />
+      <Navbar hideToggle forceDark showOnlyLogin />
 
       {/* Hero */}
       <section style={{
@@ -79,7 +79,7 @@ const LandingPage = () => {
             <p className="lead mb-4 text-light" style={{ maxWidth: 500, opacity: 0.8 }}>
               Order from Chennai's best restaurants. Scan the QR code at your table and order instantly — no app download needed.
             </p>
-            <button className="btn btn-warning btn-lg me-3 fw-bold" onClick={() => navigate('/login')}>
+            <button className="btn btn-warning btn-lg me-3 fw-bold" onClick={() => navigate('/login?role=customer')}>
               Order Now
             </button>
             <button className="btn btn-outline-light btn-lg fw-bold" onClick={() => scrollTo('restaurants')}>
@@ -104,7 +104,7 @@ const LandingPage = () => {
                   <p className="card-text text-secondary">
                     Scan QR code at your table, browse the menu, and place your order directly from your phone.
                   </p>
-                  <button className="btn btn-warning mt-3 fw-bold" onClick={() => navigate('/login')}>
+                  <button className="btn btn-warning mt-3 fw-bold" onClick={() => navigate('/login?role=customer')}>
                     Login as Customer
                   </button>
                 </div>
@@ -119,7 +119,7 @@ const LandingPage = () => {
                   <p className="card-text text-secondary">
                     View incoming orders, update status, and manage today's menu availability.
                   </p>
-                  <button className="btn btn-warning mt-3 fw-bold" onClick={() => navigate('/login')}>
+                  <button className="btn btn-warning mt-3 fw-bold" onClick={() => navigate('/login?role=waiter')}>
                     Login as Waiter
                   </button>
                 </div>
@@ -134,13 +134,54 @@ const LandingPage = () => {
                   <p className="card-text text-secondary">
                     Register your restaurant, add menu items, manage waiters, and view analytics dashboard.
                   </p>
-                  <button className="btn btn-warning mt-3 fw-bold" onClick={() => navigate('/login')}>
+                  <button className="btn btn-warning mt-3 fw-bold" onClick={() => navigate('/login?role=admin')}>
                     Login as Admin
                   </button>
                 </div>
               </div>
             </div>
 
+          </div>
+        </div>
+      </section>
+
+      {/* Own a Restaurant? — CTA for restaurant owners */}
+      <section className="py-5" style={{ backgroundColor: '#111318' }}>
+        <div className="container">
+          <div
+            className="text-center py-5 px-4"
+            style={{
+              background: 'linear-gradient(135deg, rgba(255,193,7,0.12) 0%, rgba(255,152,0,0.08) 100%)',
+              border: '1px solid rgba(255,193,7,0.25)',
+              borderRadius: '24px',
+              backdropFilter: 'blur(12px)'
+            }}
+          >
+            <div style={{ fontSize: '3rem', marginBottom: '12px' }}>🏪</div>
+            <h2 className="fw-bold text-white mb-2" style={{ fontSize: '2rem' }}>
+              Own a Restaurant?
+            </h2>
+            <p className="text-secondary mb-4 mx-auto" style={{ maxWidth: 520, fontSize: '1.05rem', lineHeight: 1.7 }}>
+              Join FoodieXpress and start receiving orders today. Set up your restaurant, add your menu, and manage everything from one powerful dashboard — completely free.
+            </p>
+            <div className="d-flex flex-column align-items-center gap-3">
+              <button
+                className="btn btn-warning btn-lg fw-bold px-5"
+                style={{ borderRadius: '12px', fontSize: '1rem', letterSpacing: '0.5px' }}
+                onClick={() => navigate('/register-restaurant')}
+              >
+                🚀 Register Your Restaurant
+              </button>
+              <p className="text-secondary small mb-0" style={{ fontSize: '0.85rem' }}>
+                Already registered?{' '}
+                <span
+                  onClick={() => navigate('/login?role=admin')}
+                  style={{ color: '#ffc107', cursor: 'pointer', textDecoration: 'underline', textUnderlineOffset: '3px' }}
+                >
+                  Login as Admin
+                </span>
+              </p>
+            </div>
           </div>
         </div>
       </section>

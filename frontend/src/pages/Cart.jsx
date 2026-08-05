@@ -7,17 +7,29 @@ const Cart = () => {
   const { cartItems, removeFromCart, updateQuantity, totalAmount, clearCart } = useCart();
   const navigate = useNavigate();
   const [orderType, setOrderType] = useState("dine_in");
+  const [tableNumber, setTableNumber] = useState(localStorage.getItem("tableNumber") || "");
+  const [tableError, setTableError] = useState("");
+  const [orderSuccess, setOrderSuccess] = useState(false);
+  const [placedOrderInfo, setPlacedOrderInfo] = useState(null);
 
   const gst = +(totalAmount * 0.05).toFixed(2);
   const total = +(totalAmount + gst).toFixed(2);
 
   const handlePlaceOrder = async () => {
+    if (orderType === "dine_in") {
+      if (!tableNumber || !tableNumber.toString().trim()) {
+        setTableError("Please enter your table number.");
+        return;
+      }
+    }
+    setTableError("");
+
     const user = JSON.parse(localStorage.getItem("user"));
 
     const payload = {
-      customer_id: user.id,
+      customer_id: user?.id,
       restaurant_id: Number(localStorage.getItem("selectedRestaurantId")),
-      table_number: Number(localStorage.getItem("tableNumber")),
+      table_number: orderType === "dine_in" ? Number(tableNumber) : null,
       order_type: orderType,
       items: cartItems.map(item => ({
         menu_item_id: item.id,
@@ -39,21 +51,47 @@ const Cart = () => {
       const data = await res.json();
 
       if (!res.ok) {
-    alert(data.error || "Order failed.");
-    return;
-}
+        alert(data.error || "Order failed.");
+        return;
+      }
 
-alert(`🎉 Order #${data.order_id} placed successfully!`);
+      setPlacedOrderInfo(data);
+      setOrderSuccess(true);
+      clearCart();
 
-clearCart();
-
-navigate("/my-orders");
+      setTimeout(() => {
+        navigate("/my-orders");
+      }, 2000);
 
     } catch (err) {
       console.error(err);
       alert("Unable to connect to backend.");
     }
   };
+
+  if (orderSuccess) {
+    return (
+      <div>
+        <Navbar />
+        <div className="page-body d-flex align-items-center justify-content-center" style={{ minHeight: '70vh' }}>
+          <div className="text-center glass-card p-5" style={{ maxWidth: 460 }}>
+            <div style={{ fontSize: '3.5rem', marginBottom: '16px' }}>🎉</div>
+            <h3 className="text-light fw-bold mb-2">Order Placed Successfully!</h3>
+            <p className="text-warning fw-bold fs-5 mb-3">
+              Tracking your order...
+            </p>
+            <p className="text-secondary small mb-4">
+              Your order #{placedOrderInfo?.order_id} has been sent to {placedOrderInfo?.restaurant || 'the kitchen'}.
+            </p>
+            <div className="d-flex align-items-center justify-content-center gap-2 text-warning small">
+              <span className="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
+              Redirecting to My Orders page...
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   if (cartItems.length === 0) {
     return (
@@ -200,31 +238,67 @@ navigate("/my-orders");
                 <span className="menu-price">₹{total}</span>
               </div>
 
-              {/* Table Number */}
-              <div className="search-input mb-3" style={{ cursor: 'default' }}>
-                <i className="bi bi-geo-alt me-2"></i>
-                Table {localStorage.getItem("tableNumber")}
-              </div>
-
               {/* Order Type */}
               <div className="mb-4">
                 <label className="nav-section-label d-block mb-2">
                   ORDER TYPE
                 </label>
-                <div className="d-flex gap-2">
+                <div className="d-flex gap-2 mb-3">
                   <button
+                    type="button"
                     className={orderType === "dine_in" ? "btn-primary-custom flex-fill justify-content-center" : "btn-outline-custom flex-fill justify-content-center"}
-                    onClick={() => setOrderType("dine_in")}
+                    onClick={() => {
+                      setOrderType("dine_in");
+                      setTableError("");
+                    }}
                   >
                     🪑 Dine In
                   </button>
                   <button
+                    type="button"
                     className={orderType === "takeaway" ? "btn-primary-custom flex-fill justify-content-center" : "btn-outline-custom flex-fill justify-content-center"}
-                    onClick={() => setOrderType("takeaway")}
+                    onClick={() => {
+                      setOrderType("takeaway");
+                      setTableError("");
+                    }}
                   >
                     🥡 Takeaway
                   </button>
                 </div>
+
+                {/* Table Number Input Field (Required for Dine In, Hidden for Takeaway) */}
+                {orderType === "dine_in" && (
+                  <div>
+                    <label className="nav-section-label d-block mb-1">
+                      TABLE NUMBER
+                    </label>
+                    <div className="search-input mb-1" style={{ border: tableError ? '1px solid #ff4757' : '1px solid rgba(255,255,255,0.1)' }}>
+                      <i className="bi bi-geo-alt me-2"></i>
+                      <input
+                        type="text"
+                        placeholder="Enter the table number in front of you"
+                        value={tableNumber}
+                        onChange={(e) => {
+                          setTableNumber(e.target.value);
+                          if (e.target.value.trim()) setTableError("");
+                        }}
+                        style={{
+                          background: 'transparent',
+                          border: 'none',
+                          color: '#fff',
+                          outline: 'none',
+                          width: '100%',
+                          fontSize: '0.9rem'
+                        }}
+                      />
+                    </div>
+                    {tableError && (
+                      <small className="text-danger d-block mt-1 fw-semibold" style={{ fontSize: '0.8rem' }}>
+                        {tableError}
+                      </small>
+                    )}
+                  </div>
+                )}
               </div>
 
               <button

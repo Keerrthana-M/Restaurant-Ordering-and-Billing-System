@@ -18,6 +18,7 @@ const Menu = () => {
   const [search, setSearch] = useState('');
   const [added, setAdded] = useState({});
   const [menuData, setMenuData] = useState([]);
+  const [restaurantInfo, setRestaurantInfo] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const { addToCart } = useCart();
@@ -31,13 +32,19 @@ const Menu = () => {
       return;
     }
 
-    fetch(`http://127.0.0.1:5000/api/restaurants/${restaurantId}/menu`)
-      .then(res => {
+    Promise.all([
+      fetch(`http://127.0.0.1:5000/api/restaurants/${restaurantId}/menu`).then(res => {
         if (!res.ok) throw new Error('Failed to load menu');
         return res.json();
+      }),
+      fetch(`http://127.0.0.1:5000/api/restaurants/${restaurantId}`).then(res => {
+        if (!res.ok) return null;
+        return res.json();
       })
-      .then(data => {
-        setMenuData(data);
+    ])
+      .then(([menuItems, restDetails]) => {
+        setMenuData(menuItems || []);
+        if (restDetails) setRestaurantInfo(restDetails);
         setLoading(false);
       })
       .catch(err => {
@@ -64,11 +71,27 @@ const Menu = () => {
 
       <div className="page-body fade-up pb-5 mb-5">
 
-        {/* Header */}
-        <div className="d-flex justify-content-between align-items-end mb-4">
+        {/* Header with Restaurant Context */}
+        <div className="d-flex justify-content-between align-items-end mb-4 flex-wrap gap-3">
           <div>
-            <h2 className="top-bar-title mb-1">Our Menu</h2>
-            <p className="top-bar-sub">Browse categories and add items to your cart</p>
+            <h2 className="top-bar-title mb-1">
+              Our Menu {restaurantInfo?.name ? <span style={{ color: 'var(--brand-color, #ffc107)' }}>at {restaurantInfo.name}</span> : ''}
+            </h2>
+            {restaurantInfo ? (
+              <div className="d-flex align-items-center gap-2 flex-wrap mt-1" style={{ fontSize: '0.85rem' }}>
+                <span className="badge-pill blue"><i className="bi bi-cup-hot me-1"></i>{restaurantInfo.cuisine_type || 'General'}</span>
+                <span className="text-secondary">•</span>
+                <span className="text-secondary"><i className="bi bi-geo-alt me-1"></i>{restaurantInfo.area || restaurantInfo.address}</span>
+                {restaurantInfo.opening_hours && (
+                  <>
+                    <span className="text-secondary">•</span>
+                    <span style={{ color: '#4caf50' }}><i className="bi bi-clock me-1"></i>{restaurantInfo.opening_hours}</span>
+                  </>
+                )}
+              </div>
+            ) : (
+              <p className="top-bar-sub mb-0">Browse categories and add items to your cart</p>
+            )}
           </div>
           <button className="btn-outline-custom" onClick={() => navigate('/restaurants')}>
             <i className="bi bi-arrow-left me-1"></i> Change Restaurant

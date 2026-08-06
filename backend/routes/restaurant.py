@@ -56,25 +56,20 @@ def get_restaurant_by_id(restaurant_id):
 # -----------------------------
 @restaurant_bp.route('/qr/<string:token>', methods=['GET'])
 def get_restaurant_by_qr(token):
+    restaurant = Restaurant.query.filter_by(qr_code_token=token).first()
 
-    table = RestaurantTable.query.filter_by(
-        qr_code_token=token
-    ).first()
-
-    if not table:
+    if not restaurant:
         return jsonify({
             "error": "Invalid QR code"
         }), 404
-
-    restaurant = Restaurant.query.get(table.restaurant_id)
 
     return jsonify({
         "restaurant_id": restaurant.id,
         "restaurant_name": restaurant.name,
         "area": restaurant.area,
-        "cuisine_type": restaurant.cuisine_type,
-        "table_number": table.table_number
+        "cuisine_type": restaurant.cuisine_type
     }), 200
+
 
 # -----------------------------
 # GET MENU

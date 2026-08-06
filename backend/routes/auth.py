@@ -1,5 +1,7 @@
 import os
+import re
 import random
+import string
 import uuid
 import requests
 from flask import Blueprint, request, jsonify
@@ -286,7 +288,15 @@ def register_restaurant():
         return jsonify({"error": "An account with this email already exists"}), 400
 
     # --- Create the Restaurant record first ---
-    qr_token = "qr-" + str(uuid.uuid4())[:12]  # Unique QR token for the new restaurant
+    # Generate a unique slug-based QR token: FOODIE-<NAME_SLUG>-<RANDOM6>
+    def generate_qr_token(name):
+        slug = re.sub(r'[^A-Z0-9]', '', name.upper())[:10] or 'REST'
+        while True:
+            suffix = ''.join(random.choices(string.ascii_uppercase + string.digits, k=6))
+            token = f"FOODIE-{slug}-{suffix}"
+            if not Restaurant.query.filter_by(qr_code_token=token).first():
+                return token
+    qr_token = generate_qr_token(restaurant_name)
 
     new_restaurant = Restaurant(
         name=restaurant_name,

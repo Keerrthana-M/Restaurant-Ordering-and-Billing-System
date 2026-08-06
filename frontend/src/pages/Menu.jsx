@@ -145,18 +145,28 @@ const Menu = () => {
                 {filtered.map(item => (
                   <div className="col-md-6 col-xl-4" key={item.id}>
                     <div className="menu-card h-100 d-flex flex-column">
-                     <div
-  className="menu-card-emoji"
-  style={{
-    backgroundImage: `url(${item.image_url || fallbackImages[item.category] || fallbackImages['Main Course']})`,
-    backgroundSize: 'cover',
-    backgroundPosition: 'center',
-    backgroundRepeat: 'no-repeat',
-    borderTopLeftRadius: '12px',
-    borderTopRightRadius: '12px',
-    height: '180px'
-  }}
-/>
+                      <div
+                        className="menu-card-emoji"
+                        style={{
+                          backgroundImage: `url(${item.image_url || fallbackImages[item.category] || fallbackImages['Main Course']})`,
+                          backgroundSize: 'cover',
+                          backgroundPosition: 'center',
+                          backgroundRepeat: 'no-repeat',
+                          borderTopLeftRadius: '12px',
+                          borderTopRightRadius: '12px',
+                          height: '180px'
+                        }}
+                        ref={(node) => {
+                          if (node && item.image_url) {
+                            const img = new Image();
+                            img.src = item.image_url;
+                            img.onerror = () => {
+                              const fallback = fallbackImages[item.category] || fallbackImages['Main Course'];
+                              node.style.backgroundImage = `url(${fallback})`;
+                            };
+                          }
+                        }}
+                      />
                       <div className="menu-card-body d-flex flex-column flex-grow-1">
                         <div className="d-flex justify-content-between align-items-start mb-2">
                           <span className="badge-pill gold">{item.category}</span>

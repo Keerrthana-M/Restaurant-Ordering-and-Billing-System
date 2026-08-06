@@ -18,30 +18,48 @@ const statusSteps = [
 const WaiterDashboard = () => {
   const [orders, setOrders] = useState([]);
   const [activeTab, setActiveTab] = useState('All');
-  const restaurantId = localStorage.getItem("selectedRestaurantId");
+  const [restaurantInfo, setRestaurantInfo] = useState(null);
 
-  const loadOrders = async () => {
+  const getRestaurantId = () => {
+    let id = localStorage.getItem("selectedRestaurantId");
+    if (!id) {
+      const userStr = localStorage.getItem("user");
+      if (userStr) {
+        try {
+          const user = JSON.parse(userStr);
+          id = user.restaurant_id;
+        } catch(e) {}
+      }
+    }
+    return id;
+  };
+
+  const restaurantId = getRestaurantId();
+
+  const loadOrdersAndInfo = async () => {
+    if (!restaurantId) return;
     try {
-      console.log("Restaurant ID:", restaurantId);
+      const [ordersRes, restRes] = await Promise.all([
+        fetch(`http://127.0.0.1:5000/api/restaurants/orders/${restaurantId}`),
+        fetch(`http://127.0.0.1:5000/api/restaurants/${restaurantId}`)
+      ]);
 
-      const res = await fetch(
-        `http://127.0.0.1:5000/api/restaurants/orders/${restaurantId}`
-      );
-
-      const data = await res.json();
-
-      console.log("Orders from API:", data);
-
-      setOrders(data);
-
+      if (ordersRes.ok) {
+        const data = await ordersRes.json();
+        setOrders(data);
+      }
+      if (restRes.ok) {
+        const restData = await restRes.json();
+        setRestaurantInfo(restData);
+      }
     } catch (err) {
       console.log(err);
     }
   };
 
   useEffect(() => {
-    loadOrders();
-  }, []);
+    loadOrdersAndInfo();
+  }, [restaurantId]);
 
   const tabs = ['All', 'pending', 'preparing', 'ready', 'delivered'];
 
@@ -64,7 +82,7 @@ const WaiterDashboard = () => {
         }
       );
 
-      loadOrders();
+      loadOrdersAndInfo();
 
     } catch (err) {
       console.log(err);
@@ -88,8 +106,17 @@ const WaiterDashboard = () => {
         {/* Header */}
         <div className="d-flex justify-content-between align-items-start mb-4 flex-wrap gap-3">
           <div>
-            <h2 className="top-bar-title mb-1">Waiter Dashboard</h2>
-            <p className="top-bar-sub">Manage and update orders</p>
+            <div className="d-flex align-items-center gap-3 mb-1">
+              <h2 className="top-bar-title mb-0">Waiter Dashboard</h2>
+              {restaurantInfo?.name && (
+                <span className="badge bg-warning text-dark fs-6 px-3 py-2" style={{ borderRadius: '10px' }}>
+                  <i className="bi bi-shop me-1"></i> {restaurantInfo.name}
+                </span>
+              )}
+            </div>
+            <p className="top-bar-sub mb-0">
+              Manage and update live kitchen orders for {restaurantInfo?.name ? <strong>{restaurantInfo.name}</strong> : 'your restaurant'}
+            </p>
           </div>
 
           {/* Summary Cards */}

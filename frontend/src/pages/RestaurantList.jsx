@@ -16,7 +16,9 @@ const fallbackImages = {
 const RestaurantList = () => {
   const navigate = useNavigate();
   const { user, logout } = useAuth();
-  const customerName = user?.name || user?.username || 'Customer';
+  const customerName = (user?.role === 'customer' || !user?.role) 
+    ? (user?.name || 'Customer') 
+    : 'Guest';
 
   const [restaurants, setRestaurants] = useState([]);
   const [loading, setLoading] = useState(true);

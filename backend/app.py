@@ -1073,22 +1073,23 @@ def seed_data():
 
     # -----------------------------------------------------------------------
     # FALLBACK SUPERUSER ADMIN — FOR DEVELOPMENT AND TESTING ONLY
-    # This account is NOT exposed in the UI for production use.
+    # This account is linked to KFC (r2.id) as its owner by default.
     # Real restaurant owners register via /register-restaurant.
-    # This seeded admin has no linked restaurant_id (can see all in future).
     # -----------------------------------------------------------------------
     from werkzeug.security import generate_password_hash
     admin = User(
         email='admin@foodiexpress.com',
         name='Platform Admin',
         role='admin',
+        restaurant_id=r2.id,
         password_hash=generate_password_hash('admin123')
     )
 
     waiter1 = User(
-    waiter_code='WAITER-001',
-    role='waiter',
-    restaurant_id=r2.id)
+        waiter_code='WAITER-001',
+        role='waiter',
+        restaurant_id=r2.id
+    )
 
     db.session.add_all([admin, waiter1])
     db.session.commit()

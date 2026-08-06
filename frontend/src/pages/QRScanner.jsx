@@ -7,37 +7,43 @@ const QRScanner = () => {
 
   const html5QrCodeRef = useRef(null);
   const fileInputRef = useRef(null);
+  const scannedRef = useRef(false);         // ref avoids stale closure bug
   const [error, setError] = useState('');
-  const [scanned, setScanned] = useState(false);
+  const [status, setStatus] = useState(''); // shows "Looking up restaurant…"
   const [uploading, setUploading] = useState(false);
 
-  const lookupRestaurant = async (decodedText) => {
+  const lookupRestaurant = async (rawText) => {
+    const token = (rawText || '').trim();
+    if (!token) {
+      setError('Empty QR code — could not read any data.');
+      scannedRef.current = false;
+      return;
+    }
+
+    setStatus('Looking up restaurant…');
+    setError('');
+
     try {
       const res = await fetch(
-        `http://127.0.0.1:5000/api/restaurants/qr/${decodedText}`
+        `http://127.0.0.1:5000/api/restaurants/qr/${encodeURIComponent(token)}`
       );
 
       if (!res.ok) {
-        throw new Error('Unknown QR Code');
+        const body = await res.json().catch(() => ({}));
+        throw new Error(body.error || `QR code not recognised (token: ${token})`);
       }
 
       const restaurant = await res.json();
 
-localStorage.setItem(
-  "selectedRestaurantId",
-  restaurant.restaurant_id
-);
+      localStorage.setItem('selectedRestaurantId', restaurant.restaurant_id);
+      setStatus('');
+      navigate('/menu');
 
-localStorage.setItem(
-  "tableNumber",
-  restaurant.table_number
-);
-
-navigate("/menu");
     } catch (err) {
-      console.error(err);
-      setError('This QR code is not recognized.');
-      setScanned(false);
+      console.error('QR lookup error:', err);
+      setError(err.message || 'This QR code is not recognised. Please try again.');
+      setStatus('');
+      scannedRef.current = false; // allow retry
     }
   };
 
@@ -65,54 +71,39 @@ navigate("/menu");
         await html5QrCode.start(
           camera.id,
           {
-            fps: 5,
-            qrbox: { width: 220, height: 220 }
+            fps: 10,
+            qrbox: { width: 250, height: 250 }
           },
           async (decodedText) => {
-
-            if (!isMounted || scanned) return;
-
-            setScanned(true);
+            if (!isMounted || scannedRef.current) return; // ref-based guard (no stale closure)
+            scannedRef.current = true;
             await lookupRestaurant(decodedText);
-
           },
           () => {
-            // Ignore scan failures while searching
+            // Ignore per-frame scan failures
           }
         );
 
       } catch (err) {
-
         console.error(err);
-
         if (isMounted) {
           setError(err.message || 'Unable to access camera. You can upload a QR image instead.');
         }
-
       }
     };
 
     const timer = setTimeout(startScanner, 500);
 
     return () => {
-
       isMounted = false;
       clearTimeout(timer);
 
       const scanner = html5QrCodeRef.current;
-
       if (scanner) {
-
         html5QrCodeRef.current = null;
-
         scanner.stop().catch(() => {});
-
-        try {
-          scanner.clear();
-        } catch (e) {}
-
+        try { scanner.clear(); } catch (e) {}
       }
-
     };
 
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -124,10 +115,10 @@ navigate("/menu");
 
     setUploading(true);
     setError('');
+    setStatus('');
 
     try {
-      // Stop the live camera first, since the same #qr-reader div
-      // can't be used by camera and file scanning at the same time
+      // Stop the live camera first
       const liveScanner = html5QrCodeRef.current;
       if (liveScanner) {
         html5QrCodeRef.current = null;
@@ -138,17 +129,18 @@ navigate("/menu");
       const fileScanner = new Html5Qrcode('qr-reader', { verbose: false });
       const decodedText = await fileScanner.scanFile(file, false);
 
-      setScanned(true);
-      await lookupRestaurant(decodedText);
-
       try { fileScanner.clear(); } catch (err) {}
+
+      scannedRef.current = true;
+      await lookupRestaurant(decodedText);
 
     } catch (err) {
       console.error('File scan failed:', err);
-      setError('Could not read a QR code from that image. Try a clearer image.');
+      setError('Could not read a QR code from that image. Make sure it is the downloaded QR PNG and try again.');
+      scannedRef.current = false;
     } finally {
       setUploading(false);
-      e.target.value = ''; // allow re-selecting the same file if needed
+      e.target.value = '';
     }
   };
 
@@ -198,20 +190,52 @@ navigate("/menu");
 
         <div
           id="qr-reader"
-          style={{
-            width: '100%'
-          }}
+          style={{ width: '100%' }}
         ></div>
+
+        {/* Status feedback */}
+        {status && (
+          <div
+            style={{
+              marginTop: 20,
+              color: '#ffc107',
+              textAlign: 'center',
+              fontWeight: 600,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: 8
+            }}
+          >
+            <span
+              style={{
+                display: 'inline-block',
+                width: 16,
+                height: 16,
+                border: '2px solid #ffc107',
+                borderTopColor: 'transparent',
+                borderRadius: '50%',
+                animation: 'spin 0.8s linear infinite'
+              }}
+            />
+            {status}
+          </div>
+        )}
 
         {error && (
           <div
             style={{
               marginTop: 20,
+              background: 'rgba(255,77,79,0.12)',
+              border: '1px solid rgba(255,77,79,0.4)',
+              borderRadius: 10,
+              padding: '12px 16px',
               color: '#ff4d4f',
-              textAlign: 'center'
+              textAlign: 'center',
+              fontSize: '0.9rem'
             }}
           >
-            {error}
+            ⚠️ {error}
           </div>
         )}
 
@@ -244,7 +268,7 @@ navigate("/menu");
             cursor: uploading ? 'wait' : 'pointer'
           }}
         >
-          {uploading ? 'Scanning image...' : '📁 Upload QR Image Instead'}
+          {uploading ? 'Scanning image…' : '📁 Upload QR Image Instead'}
         </button>
 
         <button
@@ -262,6 +286,8 @@ navigate("/menu");
         >
           ← Back to Restaurants
         </button>
+
+        <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
       </div>
     </div>
   );

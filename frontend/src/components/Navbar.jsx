@@ -28,7 +28,7 @@ const Navbar = ({ hideToggle = false, forceDark = false, showOnlyLogin = false }
 
   // Fetch active order count for customer
   useEffect(() => {
-    if (isLoggedIn && user?.role === 'customer' && user?.id) {
+    if (isLoggedIn && user?.id && user?.role !== 'waiter' && user?.role !== 'admin') {
       fetch(`http://127.0.0.1:5000/api/restaurants/customer-orders/${user.id}`)
         .then(res => res.ok ? res.json() : [])
         .then(orders => {
@@ -128,8 +128,8 @@ const Navbar = ({ hideToggle = false, forceDark = false, showOnlyLogin = false }
             </button>
           )}
 
-          {/* Cart Button */}
-          {isLoggedIn && !showOnlyLogin && user?.role !== 'waiter' && user?.role !== 'admin' && (
+          {/* Cart Button - Visible for customers and guest/default users (hidden only for waiter & admin) */}
+          {!showOnlyLogin && user?.role !== 'waiter' && user?.role !== 'admin' && (
             <button
               onClick={() => navigate('/cart')}
               style={{ background: 'transparent', border: '1px solid var(--brand-color, #ffc107)', borderRadius: 8, padding: '6px 14px', color: 'var(--brand-color, #ffc107)', fontSize: '0.8rem', cursor: 'pointer', position: 'relative' }}
@@ -143,8 +143,8 @@ const Navbar = ({ hideToggle = false, forceDark = false, showOnlyLogin = false }
             </button>
           )}
 
-          {/* My Orders Button for Customer */}
-          {isLoggedIn && !showOnlyLogin && user?.role === 'customer' && (
+          {/* My Orders Button - Visible whenever user is logged in (unless waiter or admin) */}
+          {isLoggedIn && !showOnlyLogin && user?.role !== 'waiter' && user?.role !== 'admin' && (
             <button
               onClick={() => navigate('/my-orders')}
               style={{ background: 'transparent', border: '1px solid var(--brand-color, #ffc107)', borderRadius: 8, padding: '6px 14px', color: 'var(--brand-color, #ffc107)', fontSize: '0.8rem', cursor: 'pointer', position: 'relative' }}

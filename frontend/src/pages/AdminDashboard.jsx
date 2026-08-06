@@ -1,5 +1,6 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
+import { QRCodeCanvas } from 'qrcode.react';
 import Navbar from '../components/Navbar';
 
 const COLORS = ['#ffc107', '#ff9800', '#ff5722', '#4caf50', '#2196f3'];
@@ -61,17 +62,18 @@ const AdminDashboard = () => {
   const restaurantId = localStorage.getItem("selectedRestaurantId") || localStorage.getItem("adminRestaurantId");
 
   const getIdToUse = () => {
-    let idToUse = restaurantId;
-    if (!idToUse) {
-      const userStr = localStorage.getItem("user");
-      if (userStr) {
-        try {
-          const user = JSON.parse(userStr);
-          idToUse = user.restaurant_id;
-        } catch (e) {}
-      }
+    // 1. First priority: The restaurant linked directly to the logged-in admin user's account
+    const userStr = localStorage.getItem("user");
+    if (userStr) {
+      try {
+        const parsed = JSON.parse(userStr);
+        if (parsed && parsed.restaurant_id) {
+          return parsed.restaurant_id;
+        }
+      } catch (e) {}
     }
-    return idToUse;
+    // 2. Fallbacks
+    return localStorage.getItem("adminRestaurantId") || localStorage.getItem("selectedRestaurantId");
   };
 
   const loadData = () => {
@@ -265,15 +267,22 @@ const AdminDashboard = () => {
 
       <div className="container-fluid px-4 py-4">
         {/* Page Header */}
-        <div className="mb-4 d-flex justify-content-between align-items-center flex-wrap">
+        <div className="mb-4 d-flex justify-content-between align-items-center flex-wrap gap-3">
           <div>
-            <h2 className="top-bar-title fw-bold mb-1">Admin Dashboard</h2>
-            <p className="text-secondary small">
-              Manage your restaurant analytics, menu, staff, and view orders
+            <div className="d-flex align-items-center gap-3 mb-1">
+              <h2 className="top-bar-title fw-bold mb-0">Admin Dashboard</h2>
+              {profile?.name && (
+                <span className="badge bg-warning text-dark fs-6 px-3 py-2" style={{ borderRadius: '10px' }}>
+                  <i className="bi bi-shop me-1"></i> {profile.name}
+                </span>
+              )}
+            </div>
+            <p className="text-secondary small mb-0">
+              Manage analytics, menu, staff, and orders for {profile?.name ? <strong>{profile.name}</strong> : 'your restaurant'}
             </p>
           </div>
           {profile && profile.logo && (
-             <img src={profile.logo} alt="Restaurant Logo" style={{ height: '50px', borderRadius: '8px', objectFit: 'contain' }} />
+             <img src={profile.logo} alt="Restaurant Logo" style={{ height: '50px', borderRadius: '8px', objectFit: 'contain' }} onError={(e) => { e.target.style.display = 'none'; }} />
           )}
         </div>
 
@@ -336,6 +345,105 @@ const AdminDashboard = () => {
                   </form>
                 </div>
               </div>
+
+              {/* ── QR CODE CARD ── */}
+              {profile.qr_code_token ? (
+                <div className="glass-card mt-4" style={{ borderRadius: '14px' }}>
+                  <div className="card-body p-4">
+                    <div className="d-flex align-items-center justify-content-between mb-3 flex-wrap gap-2">
+                      <div>
+                        <h5 className="fw-bold mb-1">📲 Restaurant QR Code</h5>
+                        <p className="text-secondary small mb-0">Customers scan this QR to instantly open your menu. One QR per restaurant — no table-level codes needed.</p>
+                      </div>
+                    </div>
+
+                    {/* QR Image */}
+                    <div className="d-flex flex-column align-items-center py-4">
+                      <div
+                        id="restaurant-qr-canvas-wrapper"
+                        style={{
+                          background: '#fff',
+                          padding: '20px',
+                          borderRadius: '16px',
+                          display: 'inline-block',
+                          boxShadow: '0 4px 24px rgba(0,0,0,0.3)'
+                        }}
+                      >
+                        <QRCodeCanvas
+                          id="restaurant-qr-canvas"
+                          value={profile.qr_code_token}
+                          size={220}
+                          bgColor="#ffffff"
+                          fgColor="#111111"
+                          level="H"
+                          includeMargin={false}
+                        />
+                        <p className="text-center mt-2 mb-0 fw-bold" style={{ color: '#111', fontSize: '0.8rem', letterSpacing: 1 }}>
+                          {profile.name}
+                        </p>
+                      </div>
+
+                      {/* Token display */}
+                      <div className="mt-3 px-3 py-2 rounded" style={{ background: 'rgba(255,193,7,0.1)', border: '1px solid rgba(255,193,7,0.3)' }}>
+                        <span className="text-secondary small me-2">Token:</span>
+                        <code className="text-warning" style={{ fontSize: '0.85rem', letterSpacing: 1 }}>{profile.qr_code_token}</code>
+                      </div>
+
+                      {/* Buttons */}
+                      <div className="d-flex gap-3 mt-4 flex-wrap justify-content-center">
+                        <button
+                          className="btn btn-warning fw-bold px-4"
+                          style={{ borderRadius: '10px' }}
+                          onClick={() => {
+                            const canvas = document.getElementById('restaurant-qr-canvas');
+                            if (!canvas) return;
+                            const url = canvas.toDataURL('image/png');
+                            const link = document.createElement('a');
+                            link.href = url;
+                            link.download = `${profile.name.replace(/\s+/g, '_')}_QR.png`;
+                            link.click();
+                          }}
+                        >
+                          ⬇️ Download QR Code
+                        </button>
+                        <button
+                          className="btn btn-outline-warning fw-bold px-4"
+                          style={{ borderRadius: '10px' }}
+                          onClick={() => {
+                            const canvas = document.getElementById('restaurant-qr-canvas');
+                            if (!canvas) return;
+                            const dataUrl = canvas.toDataURL('image/png');
+                            const printWindow = window.open('', '_blank', 'width=400,height=500');
+                            printWindow.document.write(`
+                              <html><head><title>QR Code - ${profile.name}</title>
+                              <style>
+                                body { margin: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; font-family: sans-serif; background: #fff; }
+                                img { width: 260px; height: 260px; }
+                                h2 { margin-top: 16px; font-size: 1.2rem; color: #111; }
+                                p { color: #555; font-size: 0.8rem; margin-top: 4px; }
+                              </style></head>
+                              <body>
+                                <img src="${dataUrl}" />
+                                <h2>${profile.name}</h2>
+                                <p>Scan to view our menu</p>
+                              </body></html>
+                            `);
+                            printWindow.document.close();
+                            printWindow.focus();
+                            setTimeout(() => printWindow.print(), 500);
+                          }}
+                        >
+                          🖨️ Print QR Code
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                <div className="glass-card mt-4 p-4 text-center text-secondary" style={{ borderRadius: '14px' }}>
+                  <p className="mb-0">Loading QR code...</p>
+                </div>
+              )}
             </div>
           </div>
         )}
@@ -464,7 +572,10 @@ const AdminDashboard = () => {
                       </div>
                       <div className="col-md-6">
                         <label className="text-secondary small">Image URL</label>
-                        <input type="text" className="form-control" style={{ borderRadius: '10px' }} value={menuForm.image_url} onChange={e => setMenuForm({...menuForm, image_url: e.target.value})} />
+                        <input type="text" className="form-control" style={{ borderRadius: '10px' }} value={menuForm.image_url} onChange={e => setMenuForm({...menuForm, image_url: e.target.value})} placeholder="https://images.unsplash.com/..." />
+                        <small className="text-muted d-block mt-1" style={{ fontSize: '0.75rem' }}>
+                          💡 <strong>Tip:</strong> Direct image links ending in <code>.jpg</code>, <code>.png</code>, or Unsplash/Imgur links work best. Google Search page URLs (e.g. <code>google.com/imgres?...</code>) will not render.
+                        </small>
                       </div>
                       <div className="col-12">
                         <label className="text-secondary small">Description</label>
@@ -512,7 +623,15 @@ const AdminDashboard = () => {
                         <tr key={item.id}>
                           <td>
                             {item.image_url ? (
-                              <img src={item.image_url} alt={item.name} style={{ width: '40px', height: '40px', objectFit: 'cover', borderRadius: '8px' }} />
+                              <img 
+                                src={item.image_url} 
+                                alt={item.name} 
+                                style={{ width: '40px', height: '40px', objectFit: 'cover', borderRadius: '8px' }} 
+                                onError={(e) => {
+                                  e.target.onerror = null;
+                                  e.target.src = 'https://images.unsplash.com/photo-1631515243349-e0cb75fb8d3a?w=100&h=100&fit=crop';
+                                }}
+                              />
                             ) : (
                               <div style={{ width: '40px', height: '40px', background: '#333', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>🍽</div>
                             )}
